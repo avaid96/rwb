@@ -203,8 +203,11 @@ INSERT INTO rwb_permissions (name,action) VALUES('root','give-opinion-data');
 -- Create table for one-click links
 --
 CREATE TABLE rwb_clicked (
-link VARCHAR(200) NOT NULL primary key,
-used NUMBER(1) NOT NULL CHECK (used in (0,1)));
+ref VARCHAR(200) NOT NULL,
+uuid VARCHAR(11) NOT NULL,
+used NUMBER(1) NOT NULL CHECK (used in (0,1)),
+primary key (ref, uuid)
+);
 
 
 

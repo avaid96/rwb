@@ -506,6 +506,69 @@ if ($action eq "invite-user") {
    }
 }
 
+if ($action eq "linkreg") {
+	
+	#BASICS
+	print "Register\n";
+	my $ref = param('referred');
+	print $ref;
+	my $uuid = param('uuid');
+	print $uuid;
+
+	#USED
+	print "\nused=";
+   	my @result = eval {ExecSQL($dbuser,$dbpasswd, "select used from rwb_clicked where ref=? and uuid=?",undef,$user,$uuid);};
+	my $rowref = @result[0];
+    	my $used_num = @{$rowref}[0];
+	print $used_num;
+	
+	#IF LINK IS UNUSED
+	if($used_num==1) {
+		print "<br><p>Link is valid</p>";	
+
+		#MARK LINK AS VISITED
+   		#eval {ExecSQL($dbuser,$dbpasswd, "update rwb_clicked set used=0 where ref=? and uuid=?",undef,$user,$uuid);};
+	  	
+		if(!$run) {
+			#CREATE FORM TO CREATE ACCOUNT	
+			print start_form(-name=>'register'),
+				h2('Register'),
+					"E-mail: ", textfield(-name=>'email'),
+						p, 
+							"Username: ", textfield(-name=>'username'),
+								p,
+									"Password (>8Char): ", password_field(-name=>'password'),
+										p, 
+											hidden(-name=>'run',-default=>['1']),
+											hidden(-name=>'refer',-default=>[param('referred')]),
+											hidden(-name=>'act',-default=>['linkreg']),
+											hidden(-name=>'uuid',-default=>[$uuid]),
+											submit, end_form, hr;
+									
+		} else {
+			print "form ";
+			my $username=param('username');
+            		my $password=param('password');
+            		my $email=param('email');
+            		my $refer=param('refer');
+			print "$username $password $email $refer";
+			#ADD THE USER
+			# UserAdd($name,$password,$email)
+			my $err = UserAdd($username, $password, $email, $refer);
+			if ($err) {
+				print "Registration incomplete: $err";
+			} else {
+				print "worked";
+				#GIVE PERMISSIONS
+
+			}
+		}
+
+	} else {
+		print "<br><p>Link is invalid. It has already been used</p>";
+	}
+}
+
 if ($action eq "give-opinion-data") { 
   print h2("Giving Location Opinion Data Is Unimplemented");
 }
@@ -992,7 +1055,7 @@ sub InviteUser {
    #INSERT INTO CLICKED TABLE
    #1 = not visited (link is valid)
    my @error;
-   eval {ExecSQL($dbuser,$dbpasswd, "INSERT INTO rwb_clicked VALUES(?, 1)",undef,$link);};
+   eval {ExecSQL($dbuser,$dbpasswd, "INSERT INTO rwb_clicked VALUES(?, ?, 1)",undef,$user,$uuid);};
    
    #MESSAGE BODY IN FILE
    my $filename = "mail.txt";
@@ -1004,7 +1067,7 @@ sub InviteUser {
    my $files = `cat mail.txt | mail -s "this is a test!" $email`;
 
    #CONFIRMATION
-   return "Test: $link";
+   return "Sent email: $link";
 }
 
 
