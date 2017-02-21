@@ -1,0 +1,9 @@
+rwb.tgz contains the project handout.   You need this.
+
+fec contains detailed information about the FEC schemas and
+data import procedures.  You probabably don't need this.
+fec/ora/setup-all.sh is the script
+that creates all the FEC tables in the cs339 tablespace.
+Note that the FEC raw data is not included in the fec directory.
+
+
