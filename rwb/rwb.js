@@ -193,6 +193,10 @@ Reposition = function(pos) {
 	usermark.setPosition(new google.maps.LatLng(lat,long));
 },
 
+emailinv = function() {
+	console.log("test");
+},
+
 
 //
 // The start function is called back once the document has 

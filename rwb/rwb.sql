@@ -199,6 +199,14 @@ INSERT INTO rwb_permissions (name,action) VALUES('root','give-opinion-data');
 -- A user that's been added will be able to do all but manage-users
 --
 
+--
+-- Create table for one-click links
+--
+CREATE TABLE rwb_clicked (
+link VARCHAR(200) NOT NULL primary key,
+used NUMBER(1) NOT NULL CHECK (used in (0,1)));
+
+
 
 
 quit;

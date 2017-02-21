@@ -204,6 +204,14 @@ if ($action eq "login") {
   }
 } 
 
+if ($action eq "invite") { 
+  print "<p>test</p>";
+  if ($run) { 
+	$action = "base";
+ 	$run = 1;
+  }
+}
+
 
 #
 # If we are being asked to log out, then if 
@@ -476,7 +484,26 @@ if ($action eq "near") {
 
 
 if ($action eq "invite-user") { 
-  print h2("Invite User Functionality Is Unimplemented");
+  if (!UserCan($user,"add-users") && !UserCan($user,"manage-users") && !UserCan($user, "invite-users")) { 
+	print h2('You do not have the required permissions to invite users.');
+  } else {
+	if(!$run) { 
+  		print start_form(-name=>'Invite'),
+			h2('Invite to Red, White, and Blue'),
+				"email",textfield(-name=>'email'),
+					p,
+	    				hidden(-name=>'act',default=>['invite-user']),
+	      					hidden(-name=>'run',default=>['1']),
+							submit,
+								hr,
+									 end_form;
+	} else {
+		my $email=param('email');
+	        my $err;
+		$err = InviteUser($email);	
+		print $err;
+	}
+   }
 }
 
 if ($action eq "give-opinion-data") { 
@@ -954,8 +981,31 @@ sub UserCan {
   }
 }
 
+# Invites a user
+sub InviteUser {
+   my ($email)=@_;
+   my $uuid = time();
 
+   #MAKE LINK
+   my $link = "http://murphy.wot.eecs.northwestern.edu/~aav336/rwb/rwb.pl?act=linkreg&referred=$user&uuid=$uuid";
 
+   #INSERT INTO CLICKED TABLE
+   #1 = not visited (link is valid)
+   my @error;
+   eval {ExecSQL($dbuser,$dbpasswd, "INSERT INTO rwb_clicked VALUES(?, 1)",undef,$link);};
+   
+   #MESSAGE BODY IN FILE
+   my $filename = "mail.txt";
+   open(my $fh, '>', $filename) or die "Could not open file '$filename' $!";
+   print $fh "$link\n";
+   close $fh;
+
+   #SEND EMAIL
+   my $files = `cat mail.txt | mail -s "this is a test!" $email`;
+
+   #CONFIRMATION
+   return "Test: $link";
+}
 
 
 #
