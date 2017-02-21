@@ -509,26 +509,17 @@ if ($action eq "invite-user") {
 if ($action eq "linkreg") {
 	
 	#BASICS
-	print "Register\n";
 	my $ref = param('referred');
-	print $ref;
 	my $uuid = param('uuid');
-	print $uuid;
 
 	#USED
-	print "\nused=";
    	my @result = eval {ExecSQL($dbuser,$dbpasswd, "select used from rwb_clicked where ref=? and uuid=?",undef,$user,$uuid);};
 	my $rowref = @result[0];
     	my $used_num = @{$rowref}[0];
-	print $used_num;
 	
 	#IF LINK IS UNUSED
 	if($used_num==1) {
 		print "<br><p>Link is valid</p>";	
-
-		#MARK LINK AS VISITED
-   		#eval {ExecSQL($dbuser,$dbpasswd, "update rwb_clicked set used=0 where ref=? and uuid=?",undef,$user,$uuid);};
-	  	
 		if(!$run) {
 			#CREATE FORM TO CREATE ACCOUNT	
 			print start_form(-name=>'register'),
@@ -546,24 +537,61 @@ if ($action eq "linkreg") {
 											submit, end_form, hr;
 									
 		} else {
-			print "form ";
+			#print "form ";
 			my $username=param('username');
             		my $password=param('password');
             		my $email=param('email');
             		my $refer=param('refer');
-			print "$username $password $email $refer";
+			#print "$username $password $email $refer";
 			#ADD THE USER
-			# UserAdd($name,$password,$email)
 			my $err = UserAdd($username, $password, $email, $refer);
 			if ($err) {
 				print "Registration incomplete: $err";
 			} else {
-				print "worked";
 				#GIVE PERMISSIONS
-
+				#FOR NOW, GIVE ALL BUT MANAGE USERS PERMISSION
+				my $error1 = GiveUserPerm($username,'invite-users');
+                		my $error2 = GiveUserPerm($username,'add-users');
+                		my $error3 = GiveUserPerm($username,'query-fec-data');
+                		my $error4 = GiveUserPerm($username,'query-cs-ind-data');
+                		my $error5 = GiveUserPerm($username,'query-opinion-data');
+                		my $error6 = GiveUserPerm($username,'give-cs-ind-data');
+                		my $error7 = GiveUserPerm($username,'give-opinion-data');
+				if ($error1) { 
+                 		   print "Can't add a permission to user because: $error1";
+                		} elsif ($error2) {
+               			   print "Can't add a permission to user because: $error2";
+                		} elsif ($error3) {
+                    		   print "Can't add a permission to user because: $error3";
+                		} elsif ($error4) {
+                    		   print "Can't add a permission to user because: $error4";
+                		} elsif ($error5) {
+                    		   print "Can't add a permission to user because: $error5";
+                		} elsif ($error6) {
+                    		   print "Can't add a permission to user because: $error6";
+                		} elsif ($error7) {
+                    		   print "Can't add a permission to user because: $error7";
+                		} else {
+                    		   print "Your registration is complete!\n";
+                		}
+			       	if(UserCan($username, "give-opinion-data")) {
+				#MAKE MAP AND DISPLAY CURRENT LOCATION (ALSO UPDATES LOCATION COOKIE)
+  				print "<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js\" type=\"text/javascript\"></script>";
+  				print "<script src=\"http://maps.google.com/maps/api/js?sensor=false\" type=\"text/javascript\"></script>";
+  				print "<script type=\"text/javascript\" src=\"rwb.js\"> </script>";
+				#print start_form(-name=>'opinion'),
+				#	h2('Give your opinion for current location (Click button)'),
+				#		"E-mail: ", textfield(-name=>'email'),
+				#			p, 
+				#				hidden(-name=>'act',-default=>['give-opinion-data']),
+				#				hidden(-name=>'run',-default=>['1']),
+				#				submit, end_form, hr;
+  				print "<div id=\"map\" style=\"width:100\%; height:80\%\"></div>";
+				}
 			}
 		}
-
+		#MARK LINK AS VISITED
+   		#eval {ExecSQL($dbuser,$dbpasswd, "update rwb_clicked set used=0 where ref=? and uuid=?",undef,$user,$uuid);};
 	} else {
 		print "<br><p>Link is invalid. It has already been used</p>";
 	}

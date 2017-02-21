@@ -220,6 +220,7 @@ Start = function(location) {
 			mapTypeId: google.maps.MapTypeId.HYBRID
 		});
 
+	document.cookie = 'Location='+lat+'/'+long;
 // create a marker for the user's location and place it on the map
 	usermark = new google.maps.Marker({ map:map,
 		position: new google.maps.LatLng(lat,long),
