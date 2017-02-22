@@ -95,12 +95,14 @@ my $cookiename="RWBSession";
 # And another cookie to preserve the debug state
 #
 my $debugcookiename="RWBDebug";
+my $locationcookiename = "Location";
 
 #
 # Get the session input and debug cookies, if any
 #
 my $inputcookiecontent = cookie($cookiename);
 my $inputdebugcookiecontent = cookie($debugcookiename);
+my $inputlocationcookiecontent = cookie($locationcookiename);
 
 #
 # Will be filled in as we process the cookies and paramters
@@ -574,20 +576,8 @@ if ($action eq "linkreg") {
                 		} else {
                     		   print "Your registration is complete!\n";
                 		}
-			       	if(UserCan($username, "give-opinion-data")) {
 				#MAKE MAP AND DISPLAY CURRENT LOCATION (ALSO UPDATES LOCATION COOKIE)
-  				print "<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js\" type=\"text/javascript\"></script>";
-  				print "<script src=\"http://maps.google.com/maps/api/js?sensor=false\" type=\"text/javascript\"></script>";
-  				print "<script type=\"text/javascript\" src=\"rwb.js\"> </script>";
-				#print start_form(-name=>'opinion'),
-				#	h2('Give your opinion for current location (Click button)'),
-				#		"E-mail: ", textfield(-name=>'email'),
-				#			p, 
-				#				hidden(-name=>'act',-default=>['give-opinion-data']),
-				#				hidden(-name=>'run',-default=>['1']),
-				#				submit, end_form, hr;
   				print "<div id=\"map\" style=\"width:100\%; height:80\%\"></div>";
-				}
 			}
 		}
 		#MARK LINK AS VISITED
@@ -598,7 +588,30 @@ if ($action eq "linkreg") {
 }
 
 if ($action eq "give-opinion-data") { 
-  print h2("Giving Location Opinion Data Is Unimplemented");
+	if(!$run) {
+	if(UserCan($user, "give-opinion-data")) {
+		print start_form(-name=>'opinion'),
+			h2('Give your opinion for current location'),
+				"Red/White/Blue (enter [-1,0,+1] respectively)", textfield(-name=>'color'),
+					p, 
+					hidden(-name=>'act',-default=>['give-opinion-data']),
+					hidden(-name=>'run',-default=>['1']),
+					#hidden(-name=>'color',-default=>['1']),
+					submit, end_form, hr;
+	} else {
+		print "<p>You don't have permission to view this page</p>";
+	}
+	} else {
+  		my $opinion= param("color");
+		my $lat;
+		my $lng;
+	 	if (defined($inputlocationcookiecontent)) { 
+        	 	#Has cookie, let's decode it
+        	        ($lat,$lng) = split(/\//,$inputlocationcookiecontent);
+        	}	
+   		eval {ExecSQL($dbuser,$dbpasswd, "insert into rwb_opinions values (?, ?, ?, ?)",undef, $user, $opinion, $lat, $lng);};
+		print "<p>submitted opinion!</p>"
+	}
 }
 
 if ($action eq "give-cs-ind-data") { 
