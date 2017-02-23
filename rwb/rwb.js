@@ -127,6 +127,7 @@ NewData = function(data) {
 // All it does is copy the data that came back from the server
 // into the data division of the document.   This is a hidden 
 // division we use to cache it locally
+	console.log(data);
 	$("#data").html(data);
 // Now that the new data is in the document, we use it to
 // update the map

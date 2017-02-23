@@ -121,6 +121,8 @@ my $logincomplain=0;
 my $action;
 my $run;
 
+#Min needed for summary
+my $minSum = 10;
 
 if (defined(param("act"))) { 
   $action=param("act");
@@ -451,6 +453,8 @@ if ($action eq "near") {
 	print $str;
       }
     }
+  } else {
+ 	print "<p>Committee not selected</p>";
   }
   if ($what{candidates}) {
     my ($str,$error) = Candidates($latne,$longne,$latsw,$longsw,$cycle,$format);
@@ -461,6 +465,9 @@ if ($action eq "near") {
 	print $str;
       }
     }
+  } else {
+ 	print "<p>Candidate not selected</p>";
+	print "<div id='abc' style='display:none;'>STUFF</div>";
   }
   if ($what{individuals}) {
     my ($str,$error) = Individuals($latne,$longne,$latsw,$longsw,$cycle,$format);
@@ -471,6 +478,8 @@ if ($action eq "near") {
 	print $str;
       }
     }
+  } else {
+ 	print "<p>Individuals not selected</p>";
   }
   if ($what{opinions}) {
     my ($str,$error) = Opinions($latne,$longne,$latsw,$longsw,$cycle,$format);
@@ -480,6 +489,8 @@ if ($action eq "near") {
       } else {
 	print $str;
       }
+    } else {
+ 	print "<p>Opinions not selected</p>";
     }
   }
 }
@@ -836,19 +847,80 @@ print end_html;
 # The remainder includes utilty and other functions
 #
 
+#
+# Generate an or part of the query
+# x=1 or x=2 or x=3 types
+# #
+sub OrGenerator{
+    my ($colname,$sep,@elems) = @_;
+    my $out = "";
+    foreach (@elems) {
+        $out .= "$colname=$_ $sep ";
+    }
+    return (substr $out, 0, -(length($sep)+2));
+}
 
 #
 # Generate a table of nearby committees
 # ($table|$raw,$error) = Committees(latne,longne,latsw,longsw,cycle,format)
 # $error false on success, error string on failure
-#
+
 sub Committees {
+  #cycle is a string of cycles. eg: 1112,8384
   my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_;
   my @rows;
   eval { 
     @rows = ExecSQL($dbuser, $dbpasswd, "select latitude, longitude, cmte_nm, cmte_pty_affiliation, cmte_st1, cmte_st2, cmte_city, cmte_st, cmte_zip from cs339.committee_master natural join cs339.cmte_id_to_geo where cycle in ($cycle) and latitude>? and latitude<? and longitude>? and longitude<?",undef, $latsw,$latne,$longsw,$longne);
   };
-  
+  # SUMMARY STUFF ----------
+  my $repOr = OrGenerator("cmte_pty_affiliation","or",("'REP'","'R'","'rep'","'Rep'","'GOP'"));
+  my @repCont;
+  eval {
+  	@repCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.comm_to_comm natural join cs339.cmte_id_to_geo)) where cycle in ($cycle) and ($repOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
+  };
+  my $demOr = OrGenerator("cmte_pty_affiliation","or",("'DEM'","'D'","'dem'","'Dem'"));
+  my @demCont;
+  eval {
+  	@demCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.comm_to_comm natural join cs339.cmte_id_to_geo)) where cycle in ($cycle) and ($demOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
+  };
+  my ($rep,$dem) = (@repCont[0],@demCont[0]);
+  my $numConTot = @{$rep}[1] + @{$dem}[1];
+  my $numIt = 0;
+	
+  # NOT ENOUGH FOR A SUMMARY
+  while ($numConTot < $minSum && $numIt < 7) {
+        $latne += 0.1;
+        $latsw -= 0.1;
+        $longne += 0.1;
+        $longsw -= 0.1;
+  	eval {
+  	@repCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.comm_to_comm natural join cs339.cmte_id_to_geo)) where cycle in ($cycle) and ($repOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
+  	};
+  	eval {
+  	@demCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.comm_to_comm natural join cs339.cmte_id_to_geo)) where cycle in ($cycle) and ($demOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
+  	};
+  	my ($rep,$dem) = (@repCont[0],@demCont[0]);
+  	my $numConTot = @{$rep}[1] + @{$dem}[1];
+	$numIt++;
+  }
+
+  # ACTUALLY PREPARING SUMMARY
+  my $repTot = @{$rep}[1];
+  my $demTot = @{$dem}[1];
+  # Cleaning format in case there is nothing. '' will break comparisons
+  $repTot == '' ? ($repTot = '0') : undef; 
+  $demTot == '' ? ($demTot = '0') : undef; 
+  my $repMinusDem = $repTot - $demTot;
+  my $color = 'white';
+  if($repMinusDem>0) {
+	$color = 'red';
+  } else {
+	$color = 'blue';
+  }
+  my $finalRes = "<h5>Republican Total: $repTot\$, Democratic Total: $demTot\$</h5>";
+  print $finalRes;
+  #TODO:PRINT THIS WITH COLOR AS BACKGROUND
+  # ------------
   if ($@) { 
     return (undef,$@);
   } else {
