@@ -492,6 +492,7 @@ if ($action eq "near") {
     }
   } else {
  	print "<p>Candidate not selected</p>";
+	print "<div id='abc' style='display:none;'>STUFF</div>";
   }
   if ($what{individuals}) {
     my ($str,$error) = Individuals($latne,$longne,$latsw,$longsw,$cycle,$format);
@@ -890,73 +891,18 @@ sub OrGenerator{
 # $error false on success, error string on failure
 
 sub Committees {
-  #cycle is a string of cycles. eg: 1112,8384
-  my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_;
-  my @rows;
-  eval { 
-    @rows = ExecSQL($dbuser, $dbpasswd, "select latitude, longitude, cmte_nm, cmte_pty_affiliation, cmte_st1, cmte_st2, cmte_city, cmte_st, cmte_zip from cs339.committee_master natural join cs339.cmte_id_to_geo where cycle in ($cycle) and latitude>? and latitude<? and longitude>? and longitude<?",undef, $latsw,$latne,$longsw,$longne);
-  };
-  # SUMMARY STUFF ----------
-  my $repOr = OrGenerator("cmte_pty_affiliation","or",("'REP'","'R'","'rep'","'Rep'","'GOP'"));
-  my @repCont;
-  eval {
-  	@repCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.comm_to_comm natural join cs339.cmte_id_to_geo)) where cycle in ($cycle) and ($repOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
-  };
-  my $demOr = OrGenerator("cmte_pty_affiliation","or",("'DEM'","'D'","'dem'","'Dem'"));
-  my @demCont;
-  eval {
-  	@demCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.comm_to_comm natural join cs339.cmte_id_to_geo)) where cycle in ($cycle) and ($demOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
-  };
-  my ($rep,$dem) = (@repCont[0],@demCont[0]);
-  my $numConTot = @{$rep}[1] + @{$dem}[1];
-  my $numIt = 0;
-	
-  # NOT ENOUGH FOR A SUMMARY
-  while ($numConTot < $minSum && $numIt < 7) {
-        $latne += 0.1;
-        $latsw -= 0.1;
-        $longne += 0.1;
-        $longsw -= 0.1;
-  	eval {
-  	@repCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.comm_to_comm natural join cs339.cmte_id_to_geo)) where cycle in ($cycle) and ($repOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
-  	};
-  	eval {
-  	@demCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.comm_to_comm natural join cs339.cmte_id_to_geo)) where cycle in ($cycle) and ($demOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
-  	};
-  	my ($rep,$dem) = (@repCont[0],@demCont[0]);
-  	my $numConTot = @{$rep}[1] + @{$dem}[1];
-	$numIt++;
-  }
-
-  # ACTUALLY PREPARING SUMMARY
-  my $repTot = @{$rep}[1];
-  my $demTot = @{$dem}[1];
-  # Cleaning format in case there is nothing. '' will break comparisons
-  $repTot == '' ? ($repTot = '0') : undef; 
-  $demTot == '' ? ($demTot = '0') : undef; 
-  my $repMinusDem = $repTot - $demTot;
+  my $repMinusDem = -1;
   my $color = 'white';
   if($repMinusDem>0) {
 	$color = 'red';
   } else {
 	$color = 'blue';
   }
-  my $finalRes = "<div id=\"commSum\">Republican Total: $repTot\$, Democratic Total: $demTot\$</div>";
+  my $finalRes = "<div id=\"commSum\">Republican Total: , Democratic Total: demTot</div>";
   print $finalRes;
   print "<div id=\"commSumClr\">$color</div>";
   #TODO:PRINT THIS WITH COLOR AS BACKGROUND
   # ------------
-  if ($@) { 
-    return (undef,$@);
-  } else {
-    if ($format eq "table") { 
-      return (MakeTable("committee_data","2D",
-			["latitude", "longitude", "name", "party", "street1", "street2", "city", "state", "zip"],
-			@rows),$@);
-    } else {
-      return (MakeRaw("committee_data","2D",@rows),$@);
-    }
-  }
 }
 
 
@@ -995,74 +941,19 @@ sub Candidates {
 # $error false on success, error string on failure
 #
 sub Individuals {
-  my ($latne,$longne,$latsw,$longsw,$cycle,$format) = @_;
-  my @rows;
-  eval { 
-    @rows = ExecSQL($dbuser, $dbpasswd, "select latitude, longitude, name, city, state, zip_code, employer, transaction_amnt from cs339.individual natural join cs339.ind_to_geo where cycle=? and latitude>? and latitude<? and longitude>? and longitude<?",undef,$cycle,$latsw,$latne,$longsw,$longne);
-  };
-  
-  # SUMMARY STUFF ----------
-  my $repOr = OrGenerator("cmte_pty_affiliation","or",("'REP'","'R'","'rep'","'Rep'","'GOP'"));
-  my @repCont;
-  eval {
-  	@repCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.individual natural join cs339.ind_to_geo)) where cycle in ($cycle) and ($repOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
-  };
-  my $demOr = OrGenerator("cmte_pty_affiliation","or",("'DEM'","'D'","'dem'","'Dem'"));
-  my @demCont;
-  eval {
-  	@demCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.individual natural join cs339.ind_to_geo)) where cycle in ($cycle) and ($demOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
-  };
-  my ($rep,$dem) = (@repCont[0],@demCont[0]);
-  my $numConTot = @{$rep}[1] + @{$dem}[1];
-  my $numIt = 0;
-
-  # NOT ENOUGH FOR A SUMMARY
-  while ($numConTot < $minSum && $numIt < 7) {
-        $latne += 0.1;
-        $latsw -= 0.1;
-        $longne += 0.1;
-        $longsw -= 0.1;
-  	eval {
-  	@repCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.individual natural join cs339.ind_to_geo)) where cycle in ($cycle) and ($repOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
-  	};
-  	eval {
-  	@demCont = ExecSQL($dbuser, $dbpasswd, "select sum(transaction_amnt), count(transaction_amnt) from (cs339.committee_master natural join (cs339.individual natural join cs339.ind_to_geo)) where cycle in ($cycle) and ($demOr) and latitude>? and latitude<? and longitude>? and longitude<?", undef, $latsw, $latne, $longsw, $longne);
-  	};
-  	my ($rep,$dem) = (@repCont[0],@demCont[0]);
-  	my $numConTot = @{$rep}[1] + @{$dem}[1];
-	$numIt++;
-  }
-
-  # ACTUALLY PREPARING SUMMARY
-  my $repTot = @{$rep}[1];
-  my $demTot = @{$dem}[1];
-  # Cleaning format in case there is nothing. '' will break comparisons
-  $repTot == '' ? ($repTot = '0') : undef; 
-  $demTot == '' ? ($demTot = '0') : undef; 
-  my $repMinusDem = $repTot - $demTot;
+  my $repMinusDem = 1;
   my $color = 'white';
   if($repMinusDem>0) {
 	$color = 'red';
   } else {
 	$color = 'blue';
   }
-  my $finalRes = "<div id=\"indSum\">Republican Total: $repTot\$, Democratic Total: $demTot\$</div>";
+  my $finalRes = "<div id=\"indSum\">Republican Total: , Democratic Total: </div>";
   print $finalRes;
   print "<div id=\"indSumClr\">$color</div>";
 
   #TODO:PRINT THIS WITH COLOR AS BACKGROUND
   
-  if ($@) { 
-    return (undef,$@);
-  } else {
-    if ($format eq "table") { 
-      return (MakeTable("individual_data", "2D",
-			["latitude", "longitude", "name", "city", "state", "zip", "employer", "amount"],
-			@rows),$@);
-    } else {
-      return (MakeRaw("individual_data","2D",@rows),$@);
-    }
-  }
 }
 
 

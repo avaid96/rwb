@@ -128,6 +128,33 @@ NewData = function(data) {
 // into the data division of the document.   This is a hidden 
 // division we use to cache it locally
 	console.log(data);
+	var parser = new DOMParser()
+	var datadom = parser.parseFromString(data, "text/html");
+
+if(datadom.getElementById("commSum")!=null) {
+	//committee stuff
+	var display = datadom.getElementById("commSum").innerHTML;
+	$("#committeeSum").html(display);
+	var display = datadom.getElementById("commSumClr").innerHTML;
+	$("#committeeSum").css('background-color', display);
+}
+
+if(datadom.getElementById("indSum")!=null) {
+	//individual stuff
+	var display = datadom.getElementById("indSum").innerHTML;
+	$("#individualSum").html(display);
+	var display = datadom.getElementById("indSumClr").innerHTML;
+	$("#individualSum").css('background-color', display);
+}
+
+if(datadom.getElementById("opinSum")!=null) {
+	//opinion stuff
+	var display = datadom.getElementById("opinSum").innerHTML;
+	$("#opinionSum").html(display);
+	var display = datadom.getElementById("opSumClr").innerHTML;
+	$("#opinionSum").css('background-color', display);
+}
+
 	$("#data").html(data);
 // Now that the new data is in the document, we use it to
 // update the map
